@@ -1,6 +1,9 @@
+import connectDB from "@/lib/db"
 import Product from "@/models/Product"
+import Link from "next/link"
 
 async function ProductsPage() {
+  await connectDB()
   const products = await Product.find().lean()
 
   return (
@@ -22,6 +25,9 @@ async function ProductsPage() {
             <p>Stock: {product.quantity}</p>
 
             <p>Category: {product.category}</p>
+            <Link href={`/products/${product._id}`} className="hover:underline">
+              View
+            </Link>
           </article>
         ))}
       </div>
