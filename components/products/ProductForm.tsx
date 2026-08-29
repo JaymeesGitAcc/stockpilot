@@ -33,6 +33,11 @@ export default function ProductForm({ product, action }: ProductFormProps) {
   return (
     <form action={formAction}>
       <input type="hidden" name="id" value={product?.id.toString()} />
+      {state.message && (
+        <p role="alert" className="text-red-500">
+          {state.message}
+        </p>
+      )}
       <div>
         <label htmlFor="name">Name</label>
 
@@ -104,7 +109,13 @@ export default function ProductForm({ product, action }: ProductFormProps) {
       </div>
 
       <button type="submit" disabled={isPending}>
-        {isPending ? "Creating..." : "Create Product"}
+        {isPending
+          ? product
+            ? "updating..."
+            : "creating..."
+          : product
+            ? "Update Product"
+            : "Create Product"}
       </button>
     </form>
   )

@@ -17,14 +17,13 @@ export type ProductFormState = {
     quantity?: string[]
     category?: string[]
   }
+  message?: string
 }
 
 export async function createProduct(
   _prevState: ProductFormState,
   formData: FormData,
 ): Promise<ProductFormState> {
-  await connectDB()
-
   const data = {
     name: formData.get("name"),
     price: formData.get("price"),
@@ -44,9 +43,16 @@ export async function createProduct(
     }
   }
 
-  await connectDB()
-
-  await Product.create(result.data)
+  try {
+    await connectDB()
+    await Product.create(result.data)
+  } catch (error) {
+    console.error("Failed to create product:", error)
+    return {
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    }
+  }
 
   redirect("/products")
 }
@@ -76,19 +82,37 @@ export async function updateProduct(
     }
   }
 
-  await connectDB()
+  try {
+    await connectDB()
 
-  await Product.findByIdAndUpdate(id, result.data, { new: true })
-
+    const product = await Product.findByIdAndUpdate(id, result.data, {
+      returnDocument: "after",
+    })
+  } catch (error) {
+    console.log("Product Update Error::", error)
+    return {
+      success: false,
+      message: "Something went wrong. Please try again later.",
+    }
+  }
   redirect("/products")
 }
 
-export async function deleteProduct(formData: FormData) {
+export async function deleteProduct(
+  formData: FormData,
+): Promise<ProductFormState> {
   const productId = formData.get("productId")
-  if (typeof productId !== "string" || !productId) return
+  if (typeof productId !== "string" || !productId)
+    return {
+      success: false,
+      message: "Invalid Product Id",
+    }
 
   if (!mongoose.Types.ObjectId.isValid(productId)) {
-    return
+    return {
+      success: false,
+      message: "Invalid Product Id",
+    }
   }
 
   try {
@@ -96,10 +120,20 @@ export async function deleteProduct(formData: FormData) {
     const product = await Product.findByIdAndDelete(productId)
 
     if (!product) {
-      return
+      return {
+        success: false,
+        message: "Product Not found",
+      }
     }
-    revalidatePath("/products")
   } catch (error) {
-    console.log(error)
+    console.log("Something went wrong", error)
+    return {
+      success: false,
+      message: "Something went wrong, Please try again later",
+    }
+  }
+  revalidatePath("/products")
+  return {
+    success: true,
   }
 }

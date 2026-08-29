@@ -16,7 +16,7 @@ export default async function EditProductPage({
     notFound()
   }
 
-  connectDB()
+  await connectDB()
 
   const product = await Product.findById(id).lean()
 
