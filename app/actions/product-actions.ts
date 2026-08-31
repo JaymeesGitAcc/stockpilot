@@ -20,6 +20,11 @@ export type ProductFormState = {
   message?: string
 }
 
+export type DeleteProductState = {
+  success: boolean
+  message?: string
+}
+
 export async function createProduct(
   _prevState: ProductFormState,
   formData: FormData,
@@ -46,11 +51,24 @@ export async function createProduct(
   try {
     await connectDB()
     await Product.create(result.data)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to create product:", error)
+
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      return {
+        success: false,
+        message: "A product with this SKU already exists.",
+      }
+    }
+
     return {
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: "Failed to create product. Please try again.",
     }
   }
 
@@ -85,22 +103,32 @@ export async function updateProduct(
   try {
     await connectDB()
 
-    const product = await Product.findByIdAndUpdate(id, result.data, {
-      returnDocument: "after",
-    })
-  } catch (error) {
+    await Product.findByIdAndUpdate(id, result.data)
+  } catch (error: unknown) {
     console.log("Product Update Error::", error)
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      error.code === 11000
+    ) {
+      return {
+        success: false,
+        message: "A product with this SKU already exists.",
+      }
+    }
     return {
       success: false,
-      message: "Something went wrong. Please try again later.",
+      message: "Failed to update the product. Please try again later.",
     }
   }
   redirect("/products")
 }
 
 export async function deleteProduct(
+  _prevState: DeleteProductState,
   formData: FormData,
-): Promise<ProductFormState> {
+): Promise<DeleteProductState> {
   const productId = formData.get("productId")
   if (typeof productId !== "string" || !productId)
     return {
@@ -117,19 +145,12 @@ export async function deleteProduct(
 
   try {
     await connectDB()
-    const product = await Product.findByIdAndDelete(productId)
-
-    if (!product) {
-      return {
-        success: false,
-        message: "Product Not found",
-      }
-    }
+    await Product.findByIdAndDelete(productId)
   } catch (error) {
-    console.log("Something went wrong", error)
+    console.log("Product Delete Error: ", error)
     return {
       success: false,
-      message: "Something went wrong, Please try again later",
+      message: "Unable to delete product. Please try again later",
     }
   }
   revalidatePath("/products")
